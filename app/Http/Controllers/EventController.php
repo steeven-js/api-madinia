@@ -92,7 +92,6 @@ class EventController extends Controller
                 'url' => $session->url,
                 'sessionId' => $session->id
             ]);
-
         } catch (\Exception $e) {
             Log::error('Checkout error: ' . $e->getMessage());
 
@@ -171,15 +170,11 @@ class EventController extends Controller
                     $order->save();
 
                     // Récupérer l'email du client depuis la session Stripe
-                    try {
-                        $customerEmail = $session->customer_details->email;
-                        if ($customerEmail) {
-                            Mail::to($customerEmail)->send(new OrderConfirmation($order));
-                        } else {
-                            Log::warning('No customer email found in Stripe session');
-                        }
-                    } catch (\Exception $e) {
-                        Log::error('Failed to send order confirmation email: ' . $e->getMessage());
+                    $customerEmail = $session->customer_details->email;
+                    if ($customerEmail) {
+                        Mail::to($customerEmail)->send(new OrderConfirmation($order));
+                    } else {
+                        Log::warning('No customer email found in Stripe session');
                     }
                 }
                 break;
