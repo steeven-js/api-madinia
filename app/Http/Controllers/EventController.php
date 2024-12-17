@@ -161,20 +161,31 @@ class EventController extends Controller
 
         // Handle the event
         switch ($event->type) {
+
             case 'checkout.session.completed':
                 $session = $event->data->object;
 
                 $order = Order::where('session_id', $session->id)->first();
+                if (!$order) {
+                    Log::error('Commande non trouvée pour session_id: ' . $session->id);
+                    break;
+                }
+
                 if ($order && $order->status === 'unpaid') {
                     $order->status = 'paid';
                     $order->save();
 
-                    // Récupérer l'email du client depuis la session Stripe
-                    $customerEmail = $session->customer_details->email;
-                    if ($customerEmail) {
-                        Mail::to($customerEmail)->send(new OrderConfirmation($order));
-                    } else {
-                        Log::warning('No customer email found in Stripe session');
+                    try {
+                        $customerEmail = $session->customer_details->email;
+
+                        if ($customerEmail) {
+                            Mail::to($customerEmail)->send(new OrderConfirmation($order));
+                        } else {
+                            Log::warning('No customer email found in Stripe session');
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Failed to send order confirmation email: ' . $e->getMessage());
+                        Log::error('Stack trace: ' . $e->getTraceAsString()); // Ajout de log
                     }
                 }
                 break;
