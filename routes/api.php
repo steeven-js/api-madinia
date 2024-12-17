@@ -47,6 +47,6 @@ Route::middleware('authApi')->group(function () {
         Route::post('/create-event', [StripeEventController::class, 'createEvent']);
         Route::put('/update-event/{id}', [StripeEventController::class, 'updateEvent']);
         Route::post('/update-image/{id}', [StripeEventController::class, 'updateImage']);
-        Route::delete('/delete-event/{id}', [StripeEventController::class, 'deleteEvent']);
+        Route::post('/delete-event/{id}', [StripeEventController::class, 'deleteEvent']);
     });
 });
