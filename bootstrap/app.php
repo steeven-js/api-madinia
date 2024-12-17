@@ -22,9 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->validateCsrfTokens(except: [
+            'api/*',
             'webhook',
             'stripe/*',
-            'api/*',
+            'api/stripe/*'
         ]);
 
         //
