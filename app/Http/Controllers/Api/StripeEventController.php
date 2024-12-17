@@ -142,7 +142,7 @@ class StripeEventController extends Controller
     /**
      * Delete a Stripe product
      */
-    public function deleteEvent(string $id): JsonResponse
+    public function archiveEvent(string $id): JsonResponse
     {
         // Archive the product
         try {
