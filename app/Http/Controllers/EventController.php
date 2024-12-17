@@ -161,9 +161,11 @@ class EventController extends Controller
 
         // Handle the event
         switch ($event->type) {
-
+                // Dans la méthode webhook()
             case 'checkout.session.completed':
                 $session = $event->data->object;
+
+                Log::info('Session ID reçu: ' . $session->id); // Ajout de log
 
                 $order = Order::where('session_id', $session->id)->first();
                 if (!$order) {
@@ -171,15 +173,20 @@ class EventController extends Controller
                     break;
                 }
 
+                Log::info('Commande trouvée: ' . $order->id); // Ajout de log
+
                 if ($order && $order->status === 'unpaid') {
                     $order->status = 'paid';
                     $order->save();
 
                     try {
                         $customerEmail = $session->customer_details->email;
+                        Log::info('Email client: ' . $customerEmail); // Ajout de log
 
                         if ($customerEmail) {
+                            Log::info('Tentative d\'envoi d\'email à: ' . $customerEmail);
                             Mail::to($customerEmail)->send(new OrderConfirmation($order));
+                            Log::info('Email envoyé avec succès');
                         } else {
                             Log::warning('No customer email found in Stripe session');
                         }
