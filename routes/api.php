@@ -2,11 +2,12 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\EventController;
+use App\Http\Controllers\EventCheckOutController;
 use App\Http\Controllers\Api\EventApiController;
 use App\Http\Controllers\Api\IntercomController;
 use App\Http\Controllers\Api\ContactMailController;
 use App\Http\Controllers\Api\StripeEventController;
+use App\Http\Controllers\Api\PaymentVerificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,10 +24,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Stripe Event Routes
 Route::prefix('stripe')->group(function () {
-    Route::post('/checkout', [EventController::class, 'checkout'])->name('checkout');
-    Route::get('/success', [EventController::class, 'success'])->name('checkout.success');
-    Route::get('/cancel', [EventController::class, 'cancel'])->name('checkout.cancel');
-    Route::post('/webhook', [EventController::class, 'webhook'])->name('checkout.webhook');
+    Route::post('/checkout', [EventCheckOutController::class, 'checkout'])->name('checkout');
+    Route::get('/success', [EventCheckOutController::class, 'success'])->name('checkout.success');
+    Route::get('/cancel', [EventCheckOutController::class, 'cancel'])->name('checkout.cancel');
+    Route::post('/webhook', [EventCheckOutController::class, 'webhook'])->name('checkout.webhook');
 });
 
 // Protected Routes
@@ -37,6 +38,9 @@ Route::middleware('authApi')->group(function () {
 
     // Event Management Routes
     Route::apiResource('events', EventApiController::class);
+
+    // Verify Payment Route
+    Route::get('/verify-payment/{sessionId}', [PaymentVerificationController::class, 'verifyPayment']);
 
     // Stripe Event Routes
     Route::prefix('stripe')->group(function () {

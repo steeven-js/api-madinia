@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-class EventController extends Controller
+class EventCheckOutController extends Controller
 {
     public function __construct()
     {
@@ -76,7 +76,7 @@ class EventController extends Controller
                 ]],
                 'mode' => 'payment',
                 'success_url' => $request->returnUrl . '?session_id={CHECKOUT_SESSION_ID}',
-                'cancel_url' => $request->returnUrl,
+                'cancel_url' => env('FRONTEND_URL') . '/cancel',
             ]);
 
             // Create order record
@@ -131,13 +131,13 @@ class EventController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Success page error: ' . $e->getMessage());
-            return redirect('/')->with('error', 'Unable to process your order.');  // Changé de home à /
+            return redirect('/')->with('error', 'Unable to process your order.');
         }
     }
 
     public function cancel()
     {
-        return redirect('/')->with('error', 'Payment was cancelled.');  // Changé de home à /
+        return redirect(env('FRONTEND_URL') . '/cancel');
     }
 
     public function webhook()
