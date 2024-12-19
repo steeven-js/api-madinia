@@ -35,6 +35,10 @@ return [
         ],
     ],
 
+    'intercom' => [
+        'secret_key' => env('INTERCOM_SECRET_KEY'),
+    ],
+
     'stripe' => [
         'secret' => env('STRIPE_TEST_SECRET'),
         'public' => env('STRIPE_TEST_KEY'),
