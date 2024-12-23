@@ -31,7 +31,7 @@ class ContactMail extends Mailable
     {
         return new Envelope(
             subject: 'Nouveau message de contact',
-            from: new \Illuminate\Mail\Mailables\Address('contact@madin-ia.com', 'Madinina Web')
+            from: new \Illuminate\Mail\Mailables\Address('contact@madinia.fr', 'Madinina Web')
         );
     }
 
