@@ -164,35 +164,25 @@ class EventCheckOutController extends Controller
                 // Dans la méthode webhook()
             case 'checkout.session.completed':
                 $session = $event->data->object;
-
-                Log::info('Session ID reçu: ' . $session->id); // Ajout de log
-
                 $order = Order::where('session_id', $session->id)->first();
-                if (!$order) {
-                    Log::error('Commande non trouvée pour session_id: ' . $session->id);
-                    break;
-                }
-
-                Log::info('Commande trouvée: ' . $order->id); // Ajout de log
 
                 if ($order && $order->status === 'unpaid') {
-                    $order->status = 'paid';
-                    $order->save();
+                    $customerEmail = $session->customer_details->email;
+                    $customerName = $session->customer_details->name;
+
+                    $order->update([
+                        'status' => 'paid',
+                        'customer_email' => $customerEmail,
+                        'customer_name' => $customerName,
+                        'qr_code' => $order->generateQrCode()
+                    ]);
 
                     try {
-                        $customerEmail = $session->customer_details->email;
-                        Log::info('Email client: ' . $customerEmail); // Ajout de log
-
                         if ($customerEmail) {
-                            Log::info('Tentative d\'envoi d\'email à: ' . $customerEmail);
                             Mail::to($customerEmail)->send(new OrderConfirmation($order));
-                            Log::info('Email envoyé avec succès');
-                        } else {
-                            Log::warning('No customer email found in Stripe session');
                         }
                     } catch (\Exception $e) {
                         Log::error('Failed to send order confirmation email: ' . $e->getMessage());
-                        Log::error('Stack trace: ' . $e->getTraceAsString()); // Ajout de log
                     }
                 }
                 break;

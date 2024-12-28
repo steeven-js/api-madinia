@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EventCheckOutController;
 use App\Http\Controllers\Api\EventApiController;
 use App\Http\Controllers\Api\IntercomController;
+use App\Http\Controllers\Api\OrderApiController;
 use App\Http\Controllers\Api\ContactMailController;
 use App\Http\Controllers\Api\StripeEventController;
 use App\Http\Controllers\Api\PaymentVerificationController;
@@ -53,4 +54,7 @@ Route::middleware('authApi')->group(function () {
         Route::post('/update-image/{id}', [StripeEventController::class, 'updateImage']);
         Route::put('/archive-event/{id}', [StripeEventController::class, 'archiveEvent']);
     });
+
+    // Order Routes
+    Route::apiResource('orders', OrderApiController::class)->except(['store']);
 });
