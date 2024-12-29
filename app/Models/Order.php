@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Spatie\MediaLibrary\HasMedia;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Log;
 
-class Order extends Model
+class Order extends Model implements HasMedia
 {
-    use HasFactory;
+    use HasFactory, InteractsWithMedia;
 
     /**
      * The attributes that are mass assignable.
@@ -28,6 +31,8 @@ class Order extends Model
     protected $casts = [
         'total_price' => 'decimal:2',
     ];
+
+    protected $appends = ['qr_code_url'];
 
     const STATUS_UNPAID = 'unpaid';
     const STATUS_PAID = 'paid';
@@ -52,16 +57,42 @@ class Order extends Model
         return $this->belongsTo(Event::class);
     }
 
-    public function generateQrCode(): string
+    public function generateQrCode(): void
     {
-        // Générer une chaîne unique pour le QR code
-        $qrData = json_encode([
-            'order_id' => $this->id,
-            'event_id' => $this->event_id,
-            'timestamp' => time(),
-            'hash' => hash('sha256', $this->id . $this->event_id . env('APP_KEY'))
-        ]);
+        try {
+            $qrData = json_encode([
+                'order_id' => $this->id,
+                'event_id' => $this->event_id,
+                'timestamp' => time(),
+                'hash' => hash('sha256', $this->id . $this->event_id . env('APP_KEY'))
+            ]);
 
-        return base64_encode($qrData);
+            $this->qr_code = base64_encode($qrData);
+
+            // Générer le QR code en PNG
+            $qrCode = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')
+                ->size(300)
+                ->errorCorrection('H')
+                ->generate($this->qr_code);
+
+            // Sauvegarder le QR code dans le storage via Media Library
+            $this->clearMediaCollection('qr-codes');
+            $this->addMediaFromString($qrCode)
+                ->usingFileName("qr-code-{$this->id}.png")
+                ->toMediaCollection('qr-codes');
+
+            $this->save();
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la génération du QR code', [
+                'order_id' => $this->id,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    public function getQrCodeUrlAttribute(): ?string
+    {
+        return $this->getFirstMediaUrl('qr-codes');
     }
 }

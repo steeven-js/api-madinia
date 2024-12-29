@@ -9,7 +9,7 @@ Merci pour votre réservation pour l'événement "{{ $order->event->title }}"
 - Montant : {{ number_format($order->total_price, 2) }}€
 
 **Votre QR Code d'accès :**
-<img src="data:image/png;base64,{{ $qrCodeImage }}" alt="QR Code" style="width: 200px;">
+<img src="{{ $message->embedData(file_get_contents($qrCodePath), 'qr-code.png') }}" alt="QR Code" style="width: 200px;">
 
 Veuillez présenter ce QR code à l'entrée de l'événement.
 

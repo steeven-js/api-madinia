@@ -8,6 +8,7 @@ use App\Models\Order;
 use Illuminate\Http\Request;
 use Stripe\Checkout\Session;
 use App\Mail\OrderConfirmation;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -161,29 +162,83 @@ class EventCheckOutController extends Controller
 
         // Handle the event
         switch ($event->type) {
-                // Dans la méthode webhook()
             case 'checkout.session.completed':
-                $session = $event->data->object;
-                $order = Order::where('session_id', $session->id)->first();
-
-                if ($order && $order->status === 'unpaid') {
-                    $customerEmail = $session->customer_details->email;
-                    $customerName = $session->customer_details->name;
-
-                    $order->update([
-                        'status' => 'paid',
-                        'customer_email' => $customerEmail,
-                        'customer_name' => $customerName,
-                        'qr_code' => $order->generateQrCode()
+                try {
+                    $session = $event->data->object;
+                    Log::info('Processing checkout session', [
+                        'session_id' => $session->id,
+                        'customer_details' => $session->customer_details
                     ]);
 
-                    try {
-                        if ($customerEmail) {
-                            Mail::to($customerEmail)->send(new OrderConfirmation($order));
-                        }
-                    } catch (\Exception $e) {
-                        Log::error('Failed to send order confirmation email: ' . $e->getMessage());
+                    $order = Order::where('session_id', $session->id)->first();
+
+                    if (!$order) {
+                        Log::error('Order not found', ['session_id' => $session->id]);
+                        return response()->json(['error' => 'Order not found'], 404);
                     }
+
+                    Log::info('Found order', [
+                        'order_id' => $order->id,
+                        'status' => $order->status
+                    ]);
+
+                    if ($order->status === 'unpaid') {
+                        $customerEmail = $session->customer_details->email ?? null;
+                        $customerName = $session->customer_details->name ?? null;
+
+                        try {
+                            DB::beginTransaction();
+
+                            Log::info('Updating order', [
+                                'order_id' => $order->id,
+                                'customer_email' => $customerEmail,
+                                'customer_name' => $customerName
+                            ]);
+
+                            $order->update([
+                                'status' => 'paid',
+                                'customer_email' => $customerEmail,
+                                'customer_name' => $customerName,
+                            ]);
+
+                            // Générer le QR code
+                            $order->generateQrCode();
+
+                            DB::commit();
+
+                            if ($customerEmail) {
+                                Log::info('Sending confirmation email', [
+                                    'order_id' => $order->id,
+                                    'email' => $customerEmail
+                                ]);
+                                Mail::to($customerEmail)->send(new OrderConfirmation($order));
+                            } else {
+                                Log::warning('No customer email provided', [
+                                    'order_id' => $order->id
+                                ]);
+                            }
+                        } catch (\Exception $e) {
+                            DB::rollBack();
+                            Log::error('Error processing order payment', [
+                                'order_id' => $order->id,
+                                'error' => $e->getMessage(),
+                                'trace' => $e->getTraceAsString()
+                            ]);
+                            throw $e;
+                        }
+                    } else {
+                        Log::info('Order already processed', [
+                            'order_id' => $order->id,
+                            'status' => $order->status
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Webhook processing error', [
+                        'event_type' => $event->type,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                    return response()->json(['error' => $e->getMessage()], 500);
                 }
                 break;
 

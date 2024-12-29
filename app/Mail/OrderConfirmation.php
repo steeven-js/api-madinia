@@ -16,22 +16,21 @@ class OrderConfirmation extends Mailable
     use Queueable, SerializesModels;
 
     public $order;
-    public $qrCodeImage;
+    protected $qrCodePath;
 
     public function __construct(Order $order)
     {
         $this->order = $order;
 
-        // Générer le QR code si ce n'est pas déjà fait
-        if (!$this->order->qr_code) {
-            $this->order->qr_code = $this->order->generateQrCode();
-            $this->order->save();
-        }
-
-        // Générer l'image du QR code
-        $this->qrCodeImage = base64_encode(QrCode::format('png')
+        // Générer le QR code en PNG
+        $qrCode = QrCode::format('png')
             ->size(300)
-            ->generate($this->order->qr_code));
+            ->errorCorrection('H')
+            ->generate($this->order->qr_code);
+
+        // Sauvegarder temporairement le QR code
+        $this->qrCodePath = storage_path('app/temp/qr-' . $this->order->id . '.png');
+        file_put_contents($this->qrCodePath, $qrCode);
     }
 
     public function envelope(): Envelope
@@ -54,6 +53,26 @@ class OrderConfirmation extends Mailable
     {
         return new Content(
             markdown: 'emails.orders.confirmation',
+            with: [
+                'qrCodePath' => $this->qrCodePath,
+            ],
         );
+    }
+
+    public function build()
+    {
+        return $this->view('emails.orders.confirmation')
+                    ->attach($this->qrCodePath, [
+                        'as' => 'qr-code.png',
+                        'mime' => 'image/png',
+                    ]);
+    }
+
+    public function __destruct()
+    {
+        // Nettoyer le fichier temporaire
+        if (file_exists($this->qrCodePath)) {
+            unlink($this->qrCodePath);
+        }
     }
 }

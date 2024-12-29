@@ -18,6 +18,7 @@ class OrderResource extends JsonResource
             'customer_email' => $this->customer_email,
             'customer_name' => $this->customer_name,
             'qr_code' => $this->qr_code,
+            'qr_code_url' => $this->qr_code_url,
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
             'event' => [
