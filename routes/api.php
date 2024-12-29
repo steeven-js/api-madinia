@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\OrderApiController;
 use App\Http\Controllers\Api\ContactMailController;
 use App\Http\Controllers\Api\StripeEventController;
 use App\Http\Controllers\Api\PaymentVerificationController;
+use App\Http\Controllers\Api\QrCodeVerificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -57,4 +58,7 @@ Route::middleware('authApi')->group(function () {
 
     // Order Routes
     Route::apiResource('orders', OrderApiController::class)->except(['store']);
+
+    // Route de vérification QR code
+    Route::post('/verify-qrcode', [QrCodeVerificationController::class, 'verify']);
 });
