@@ -8,6 +8,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class Order extends Model implements HasMedia
 {
@@ -69,6 +70,9 @@ class Order extends Model implements HasMedia
 
             $this->qr_code = base64_encode($qrData);
 
+            // Générer un nom de fichier sécurisé
+            $secureFileName = Str::random(40) . '_' . hash('sha256', $this->id . time() . Str::random(16)) . '.png';
+
             // Générer le QR code en PNG
             $qrCode = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')
                 ->size(300)
@@ -78,7 +82,7 @@ class Order extends Model implements HasMedia
             // Sauvegarder le QR code dans le storage via Media Library
             $this->clearMediaCollection('qr-codes');
             $this->addMediaFromString($qrCode)
-                ->usingFileName("qr-code-{$this->id}.png")
+                ->usingFileName($secureFileName)
                 ->toMediaCollection('qr-codes');
 
             $this->save();
