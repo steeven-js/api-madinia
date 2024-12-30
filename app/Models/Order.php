@@ -61,14 +61,12 @@ class Order extends Model implements HasMedia
     public function generateQrCode(): void
     {
         try {
-            $qrData = json_encode([
+            $qrData = [
                 'order_id' => $this->id,
                 'event_id' => $this->event_id,
                 'timestamp' => time(),
                 'hash' => hash('sha256', $this->id . $this->event_id . env('APP_KEY'))
-            ]);
-
-            $this->qr_code = base64_encode($qrData);
+            ];
 
             // Générer un nom de fichier sécurisé
             $secureFileName = Str::random(40) . '_' . hash('sha256', $this->id . time() . Str::random(16)) . '.png';
@@ -77,7 +75,8 @@ class Order extends Model implements HasMedia
             $qrCode = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')
                 ->size(300)
                 ->errorCorrection('H')
-                ->generate($this->qr_code);
+                ->margin(1)
+                ->generate(json_encode($qrData));
 
             // Sauvegarder le QR code dans le storage via Media Library
             $this->clearMediaCollection('qr-codes');
@@ -85,6 +84,8 @@ class Order extends Model implements HasMedia
                 ->usingFileName($secureFileName)
                 ->toMediaCollection('qr-codes');
 
+            // Sauvegarder les données du QR code dans la base de données
+            $this->qr_code = json_encode($qrData);
             $this->save();
         } catch (\Exception $e) {
             Log::error('Erreur lors de la génération du QR code', [

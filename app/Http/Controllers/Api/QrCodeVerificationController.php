@@ -20,16 +20,8 @@ class QrCodeVerificationController extends Controller
                 'qr_code' => 'required|string'
             ]);
 
-            // Décoder le QR code
-            $decodedData = base64_decode($request->qr_code);
-            if (!$decodedData) {
-                return response()->json([
-                    'valid' => false,
-                    'message' => 'QR code invalide'
-                ], 400);
-            }
-
-            $qrData = json_decode($decodedData, true);
+            // Décoder les données JSON
+            $qrData = json_decode($request->qr_code, true);
             if (!$qrData) {
                 return response()->json([
                     'valid' => false,
@@ -80,13 +72,15 @@ class QrCodeVerificationController extends Controller
                 ], 400);
             }
 
-            // Vérifier la date de l'événement
+            // Vérifier la date de l'événement avec une marge de 2 jours
             $eventDate = $order->event->scheduled_date;
-            if ($eventDate->isPast()) {
+            $expirationDate = $eventDate->copy()->addDays(2);
+            if (now()->isAfter($expirationDate)) {
                 return response()->json([
                     'valid' => false,
                     'message' => 'Événement expiré',
-                    'event_date' => $eventDate->format('Y-m-d H:i:s')
+                    'event_date' => $eventDate->format('Y-m-d H:i:s'),
+                    'expiration_date' => $expirationDate->format('Y-m-d H:i:s')
                 ], 400);
             }
 
