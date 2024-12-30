@@ -20,11 +20,24 @@ class QrCodeVerificationController extends Controller
                 'qr_code' => 'required|string'
             ]);
 
-            // Décoder les données JSON
-            $qrData = json_decode($request->qr_code, true);
-            if (!$qrData) {
-                Log::error('Format de QR code invalide', [
+            // Décoder le base64 puis le JSON
+            $decodedBase64 = base64_decode($request->qr_code, true);
+            if ($decodedBase64 === false) {
+                Log::error('Décodage base64 échoué', [
                     'qr_code' => $request->qr_code
+                ]);
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'Format de QR code invalide'
+                ], 400);
+            }
+
+            // Décoder les données JSON
+            $qrData = json_decode($decodedBase64, true);
+            if (!$qrData) {
+                Log::error('Décodage JSON échoué', [
+                    'qr_code' => $request->qr_code,
+                    'decoded_base64' => $decodedBase64
                 ]);
                 return response()->json([
                     'valid' => false,
