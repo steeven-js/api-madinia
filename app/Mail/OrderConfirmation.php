@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Order;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
@@ -17,6 +18,7 @@ class OrderConfirmation extends Mailable
 
     public $order;
     protected $qrCodePath;
+    protected $invoicePath;
 
     public function __construct(Order $order)
     {
@@ -31,6 +33,11 @@ class OrderConfirmation extends Mailable
         // Sauvegarder temporairement le QR code
         $this->qrCodePath = storage_path('app/temp/qr-' . $this->order->id . '.png');
         file_put_contents($this->qrCodePath, $qrCode);
+
+        // Générer la facture PDF
+        $pdf = Pdf::loadView('pdf.invoice', ['order' => $this->order]);
+        $this->invoicePath = storage_path('app/temp/invoice-' . $this->order->id . '.pdf');
+        $pdf->save($this->invoicePath);
     }
 
     public function envelope(): Envelope
@@ -65,14 +72,21 @@ class OrderConfirmation extends Mailable
                     ->attach($this->qrCodePath, [
                         'as' => 'qr-code.png',
                         'mime' => 'image/png',
+                    ])
+                    ->attach($this->invoicePath, [
+                        'as' => 'facture-' . str_pad($this->order->id, 6, '0', STR_PAD_LEFT) . '.pdf',
+                        'mime' => 'application/pdf',
                     ]);
     }
 
     public function __destruct()
     {
-        // Nettoyer le fichier temporaire
+        // Nettoyer les fichiers temporaires
         if (file_exists($this->qrCodePath)) {
             unlink($this->qrCodePath);
+        }
+        if (file_exists($this->invoicePath)) {
+            unlink($this->invoicePath);
         }
     }
 }
