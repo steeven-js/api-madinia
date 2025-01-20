@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Auth;
 
 class OrderApiController extends Controller
 {
@@ -65,6 +66,19 @@ class OrderApiController extends Controller
                     Log::info('Remboursement Stripe effectué', [
                         'order_id' => $order->id,
                         'refund_id' => $refund->id
+                    ]);
+
+                    // Enregistrer l'événement de remboursement dans l'historique
+                    $order->history()->create([
+                        'old_status' => $oldStatus,
+                        'new_status' => $newStatus,
+                        'stripe_event_id' => $refund->id,
+                        'stripe_event_type' => 'refund.created',
+                        'changed_by' => Auth::user() ? Auth::user()->name : 'system',
+                        'metadata' => [
+                            'payment_intent' => $paymentIntent,
+                            'refund_amount' => $order->total_price
+                        ]
                     ]);
 
                     // Envoyer l'email de confirmation de remboursement

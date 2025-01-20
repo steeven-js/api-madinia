@@ -186,57 +186,55 @@ class EventCheckOutController extends Controller
                         $customerEmail = $session->customer_details->email ?? null;
                         $customerName = $session->customer_details->name ?? null;
 
+                        DB::beginTransaction();
                         try {
-                            DB::beginTransaction();
-
-                            Log::info('Updating order', [
-                                'order_id' => $order->id,
+                            // Mise à jour de la commande
+                            $order->update([
+                                'status' => 'paid',
                                 'customer_email' => $customerEmail,
                                 'customer_name' => $customerName
                             ]);
 
-                            $order->update([
-                                'status' => 'paid',
-                                'customer_email' => $customerEmail,
-                                'customer_name' => $customerName,
+                            // Enregistrement de l'événement Stripe dans l'historique
+                            $order->history()->create([
+                                'old_status' => 'unpaid',
+                                'new_status' => 'paid',
+                                'stripe_event_id' => $event->id,
+                                'stripe_event_type' => $event->type,
+                                'changed_by' => 'stripe',
+                                'metadata' => [
+                                    'session_id' => $session->id,
+                                    'customer_email' => $customerEmail,
+                                    'customer_name' => $customerName
+                                ]
                             ]);
 
-                            // Générer le QR code
+                            // Génération du QR code
                             $order->generateQrCode();
 
                             DB::commit();
 
+                            // Envoi de l'email de confirmation
                             if ($customerEmail) {
-                                Log::info('Sending confirmation email', [
-                                    'order_id' => $order->id,
-                                    'email' => $customerEmail
-                                ]);
                                 Mail::to($customerEmail)->send(new OrderConfirmation($order));
-                            } else {
-                                Log::warning('No customer email provided', [
-                                    'order_id' => $order->id
-                                ]);
                             }
+
+                            Log::info('Order updated successfully', [
+                                'order_id' => $order->id,
+                                'stripe_event_id' => $event->id
+                            ]);
                         } catch (\Exception $e) {
                             DB::rollBack();
-                            Log::error('Error processing order payment', [
+                            Log::error('Error updating order', [
                                 'order_id' => $order->id,
-                                'error' => $e->getMessage(),
-                                'trace' => $e->getTraceAsString()
+                                'error' => $e->getMessage()
                             ]);
                             throw $e;
                         }
-                    } else {
-                        Log::info('Order already processed', [
-                            'order_id' => $order->id,
-                            'status' => $order->status
-                        ]);
                     }
                 } catch (\Exception $e) {
-                    Log::error('Webhook processing error', [
-                        'event_type' => $event->type,
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
+                    Log::error('Error processing webhook', [
+                        'error' => $e->getMessage()
                     ]);
                     return response()->json(['error' => $e->getMessage()], 500);
                 }
@@ -246,6 +244,6 @@ class EventCheckOutController extends Controller
                 Log::info('Unhandled event type: ' . $event->type);
         }
 
-        return response('');
+        return response()->json(['status' => 'success']);
     }
 }
