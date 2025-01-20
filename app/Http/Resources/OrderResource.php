@@ -28,6 +28,35 @@ class OrderResource extends JsonResource
                 'price' => $this->event->price,
                 'status' => $this->event->status,
             ],
+            'history' => $this->whenLoaded('history', function () {
+                return $this->history->map(function ($entry) {
+                    return [
+                        'id' => $entry->id,
+                        'type' => $entry->stripe_event_type ?? ($entry->old_status ? 'status_changed' : 'order_created'),
+                        'created' => $entry->created_at->format('Y-m-d H:i:s'),
+                        'metadata' => [
+                            'old_status' => $entry->old_status,
+                            'new_status' => $entry->new_status,
+                            'changed_by' => $entry->changed_by,
+                            'description' => $this->getHistoryDescription($entry),
+                        ],
+                    ];
+                });
+            }),
         ];
+    }
+
+    private function getHistoryDescription($entry): string
+    {
+        if ($entry->stripe_event_type) {
+            return "Événement Stripe : " . $entry->stripe_event_type;
+        }
+
+        if ($entry->old_status) {
+            return "Statut modifié de {$entry->old_status} à {$entry->new_status}" .
+                   ($entry->changed_by ? " par {$entry->changed_by}" : "");
+        }
+
+        return "Commande créée";
     }
 }

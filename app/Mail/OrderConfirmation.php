@@ -2,7 +2,7 @@
 
 namespace App\Mail;
 
-use App\Models\Order;
+use App\Models\EventOrder;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -16,11 +16,11 @@ class OrderConfirmation extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $order;
+    public EventOrder $order;
     protected $qrCodePath;
     protected $invoicePath;
 
-    public function __construct(Order $order)
+    public function __construct(EventOrder $order)
     {
         $this->order = $order;
 
@@ -43,7 +43,7 @@ class OrderConfirmation extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Confirmation de réservation #' . str_pad($this->order->id, 6, '0', STR_PAD_LEFT),
+            subject: 'Confirmation de commande - Madin.IA',
             from: new Address('noreply@madinia.fr', 'Madinia Events'),
             replyTo: [
                 new Address('contact@madinia.fr', 'Support Madinia'),
@@ -59,9 +59,9 @@ class OrderConfirmation extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.orders.confirmation',
+            markdown: 'emails.order-confirmation',
             with: [
-                'qrCodePath' => $this->qrCodePath,
+                'order' => $this->order,
             ],
         );
     }

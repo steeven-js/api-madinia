@@ -58,6 +58,7 @@ Route::middleware('authApi')->group(function () {
 
     // Order Routes
     Route::apiResource('orders', OrderApiController::class)->except(['store']);
+    Route::post('/orders/{order}/regenerate-qr', [OrderApiController::class, 'regenerateQrCode']);
 
     // Route de vérification QR code
     Route::post('/verify-qrcode', [QrCodeVerificationController::class, 'verify']);

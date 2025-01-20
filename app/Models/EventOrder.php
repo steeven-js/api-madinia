@@ -5,32 +5,33 @@ namespace App\Models;
 use Spatie\MediaLibrary\HasMedia;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 
-class Order extends Model implements HasMedia
+class EventOrder extends Model implements HasMedia
 {
     use HasFactory, InteractsWithMedia;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<string>
-     */
+    protected $table = 'event_orders';
+
     protected $fillable = [
+        'event_id',
         'status',
         'total_price',
         'session_id',
-        'event_id',
-        'qr_code',
         'customer_email',
-        'customer_name'
+        'customer_name',
+        'qr_code'
     ];
 
     protected $casts = [
         'total_price' => 'decimal:2',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime'
     ];
 
     protected $appends = ['qr_code_url'];
@@ -50,12 +51,20 @@ class Order extends Model implements HasMedia
         ];
     }
 
-    /**
-     * Get the event associated with the order.
-     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('qr-codes')
+            ->useDisk('public');
+    }
+
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class);
+    }
+
+    public function history(): HasMany
+    {
+        return $this->hasMany(EventOrderHistory::class);
     }
 
     public function generateQrCode(): void
@@ -102,5 +111,31 @@ class Order extends Model implements HasMedia
     public function getQrCodeUrlAttribute(): ?string
     {
         return $this->getFirstMediaUrl('qr-codes');
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Enregistrer l'historique lors de la création
+        static::created(function ($order) {
+            $order->history()->create([
+                'new_status' => $order->status,
+                'changed_by' => 'system',
+                'metadata' => ['action' => 'order_created']
+            ]);
+        });
+
+        // Enregistrer l'historique lors du changement de statut
+        static::updated(function ($order) {
+            if ($order->isDirty('status')) {
+                $order->history()->create([
+                    'old_status' => $order->getOriginal('status'),
+                    'new_status' => $order->status,
+                    'changed_by' => Auth::user() ? Auth::user()->name : 'system',
+                    'metadata' => ['action' => 'status_changed']
+                ]);
+            }
+        });
     }
 }

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Stripe\Stripe;
 use App\Models\Event;
-use App\Models\Order;
+use App\Models\EventOrder;
 use Illuminate\Http\Request;
 use Stripe\Checkout\Session;
 use App\Mail\OrderConfirmation;
@@ -81,7 +81,7 @@ class EventCheckOutController extends Controller
             ]);
 
             // Create order record
-            Order::create([
+            EventOrder::create([
                 'status' => 'unpaid',
                 'total_price' => $event->price,
                 'session_id' => $session->id,
@@ -116,7 +116,7 @@ class EventCheckOutController extends Controller
                 throw new NotFoundHttpException('Session not found');
             }
 
-            $order = Order::where('session_id', $session->id)->first();
+            $order = EventOrder::where('session_id', $session->id)->first();
             if (!$order) {
                 throw new NotFoundHttpException('Order not found');
             }
@@ -170,7 +170,7 @@ class EventCheckOutController extends Controller
                         'customer_details' => $session->customer_details
                     ]);
 
-                    $order = Order::where('session_id', $session->id)->first();
+                    $order = EventOrder::where('session_id', $session->id)->first();
 
                     if (!$order) {
                         Log::error('Order not found', ['session_id' => $session->id]);

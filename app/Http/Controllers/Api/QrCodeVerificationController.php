@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\Order;
+use App\Models\EventOrder;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
@@ -57,7 +57,7 @@ class QrCodeVerificationController extends Controller
             }
 
             // Récupérer la commande
-            $order = Order::with('event')->find($qrData['order_id']);
+            $order = EventOrder::with('event')->find($qrData['order_id']);
             if (!$order) {
                 Log::error('Commande introuvable', [
                     'order_id' => $qrData['order_id']
@@ -96,7 +96,7 @@ class QrCodeVerificationController extends Controller
             }
 
             // Vérifier le statut de la commande
-            if ($order->status !== Order::STATUS_PAID) {
+            if ($order->status !== EventOrder::STATUS_PAID) {
                 Log::error('Commande non payée', [
                     'order_id' => $qrData['order_id'],
                     'event_id' => $qrData['event_id'],

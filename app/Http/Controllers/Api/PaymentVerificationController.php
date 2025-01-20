@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\Order;
+use App\Models\EventOrder;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 
@@ -10,7 +10,7 @@ class PaymentVerificationController extends Controller
 {
     public function verifyPayment(string $sessionId)
     {
-        $order = Order::where('session_id', $sessionId)->first();
+        $order = EventOrder::where('session_id', $sessionId)->first();
 
         if (!$order) {
             return response()->json([
