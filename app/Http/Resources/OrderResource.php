@@ -19,15 +19,15 @@ class OrderResource extends JsonResource
             'customer_name' => $this->customer_name,
             'qr_code' => $this->qr_code,
             'qr_code_url' => $this->qr_code_url,
-            'created_at' => $this->created_at->format('Y-m-d H:i:s'),
-            'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
-            'event' => [
+            'created_at' => $this->created_at ? $this->created_at->format('Y-m-d H:i:s') : null,
+            'updated_at' => $this->updated_at ? $this->updated_at->format('Y-m-d H:i:s') : null,
+            'event' => $this->event ? [
                 'id' => $this->event->id,
                 'title' => $this->event->title,
-                'scheduled_date' => $this->event->scheduled_date->format('Y-m-d H:i:s'),
+                'scheduled_date' => $this->event->scheduled_date ? $this->event->scheduled_date->format('Y-m-d H:i:s') : null,
                 'price' => $this->event->price,
                 'status' => $this->event->status,
-            ],
+            ] : null,
             'history' => $this->whenLoaded('history', function () {
                 return $this->history->map(function ($entry) {
                     return [

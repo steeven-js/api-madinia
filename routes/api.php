@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\ContactMailController;
 use App\Http\Controllers\Api\StripeEventController;
 use App\Http\Controllers\Api\PaymentVerificationController;
 use App\Http\Controllers\Api\QrCodeVerificationController;
+use App\Http\Controllers\Api\EventOrderApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -57,8 +58,9 @@ Route::middleware('authApi')->group(function () {
     });
 
     // Order Routes
-    Route::apiResource('orders', OrderApiController::class)->except(['store']);
-    Route::post('/orders/{order}/regenerate-qr', [OrderApiController::class, 'regenerateQrCode']);
+    Route::apiResource('event-orders', EventOrderApiController::class)->except(['store']);
+    Route::post('/event-orders/{order}/regenerate-qr', [EventOrderApiController::class, 'regenerateQrCode']);
+    Route::get('event-orders/{order}/invoice', [EventOrderApiController::class, 'generateInvoice']);
 
     // Route de vérification QR code
     Route::post('/verify-qrcode', [QrCodeVerificationController::class, 'verify']);

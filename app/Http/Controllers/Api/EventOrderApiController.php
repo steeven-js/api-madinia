@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Auth;
 
-class OrderApiController extends Controller
+class EventOrderApiController extends Controller
 {
     public function __construct()
     {
@@ -28,25 +28,55 @@ class OrderApiController extends Controller
      */
     public function index(): AnonymousResourceCollection
     {
-        $orders = EventOrder::with('event')->latest()->get();
+        $orders = EventOrder::with(['event', 'history'])->latest()->get();
         return OrderResource::collection($orders);
     }
 
     /**
      * Display the specified order.
      */
-    public function show(EventOrder $order): OrderResource
+    public function show($id): OrderResource|JsonResponse
     {
-        return new OrderResource($order->load('event'));
+        try {
+            $order = EventOrder::find($id);
+
+            if (!$order) {
+                return response()->json([
+                    'message' => 'Commande non trouvée',
+                    'error' => 'La commande avec l\'ID ' . $id . ' n\'existe pas'
+                ], 404);
+            }
+
+            $order = $order->load(['event', 'history']);
+            return new OrderResource($order);
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la récupération de la commande', [
+                'order_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Erreur lors de la récupération de la commande',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
      * Update the specified order in storage.
      */
-    public function update(UpdateOrderRequest $request, EventOrder $order): OrderResource
+    public function update(UpdateOrderRequest $request, $id): OrderResource|JsonResponse
     {
         try {
             DB::beginTransaction();
+
+            $order = EventOrder::find($id);
+            if (!$order) {
+                return response()->json([
+                    'message' => 'Commande non trouvée',
+                    'error' => 'La commande avec l\'ID ' . $id . ' n\'existe pas'
+                ], 404);
+            }
 
             $oldStatus = $order->status;
             $newStatus = $request->validated()['status'];
@@ -61,11 +91,6 @@ class OrderApiController extends Controller
                     // Effectuer le remboursement
                     $refund = Refund::create([
                         'payment_intent' => $paymentIntent,
-                    ]);
-
-                    Log::info('Remboursement Stripe effectué', [
-                        'order_id' => $order->id,
-                        'refund_id' => $refund->id
                     ]);
 
                     // Enregistrer l'événement de remboursement dans l'historique
@@ -86,29 +111,16 @@ class OrderApiController extends Controller
                         try {
                             Mail::to($order->customer_email)
                                 ->send(new RefundConfirmation($order, $refund->id));
-
-                            Log::info('Email de confirmation de remboursement envoyé', [
-                                'order_id' => $order->id,
-                                'customer_email' => $order->customer_email
-                            ]);
                         } catch (\Exception $e) {
-                            Log::error('Erreur lors de l\'envoi de l\'email de confirmation de remboursement', [
-                                'order_id' => $order->id,
-                                'error' => $e->getMessage()
-                            ]);
                             // Ne pas bloquer le processus si l'envoi de l'email échoue
                         }
-                    } else {
-                        Log::warning('Pas d\'email client pour envoyer la confirmation de remboursement', [
-                            'order_id' => $order->id
-                        ]);
                     }
                 } catch (\Exception $e) {
-                    Log::error('Erreur lors du remboursement Stripe', [
-                        'order_id' => $order->id,
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => 'Erreur lors du remboursement',
                         'error' => $e->getMessage()
-                    ]);
-                    throw $e;
+                    ], 500);
                 }
             }
 
@@ -122,14 +134,14 @@ class OrderApiController extends Controller
 
             DB::commit();
 
-            return new OrderResource($order->fresh()->load('event'));
+            $order = $order->fresh()->load(['event', 'history']);
+            return new OrderResource($order);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Erreur lors de la mise à jour de la commande', [
-                'order_id' => $order->id,
+            return response()->json([
+                'message' => 'Erreur lors de la mise à jour de la commande',
                 'error' => $e->getMessage()
-            ]);
-            throw $e;
+            ], 500);
         }
     }
 
@@ -149,5 +161,21 @@ class OrderApiController extends Controller
     {
         $order->generateQrCode();
         return new OrderResource($order->fresh()->load('event'));
+    }
+
+    /**
+     * Generate and return invoice PDF for the order.
+     */
+    public function generateInvoice(EventOrder $order): JsonResponse
+    {
+        try {
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.invoice', ['order' => $order->load('event')]);
+
+            return response()->json([
+                'invoice_url' => 'data:application/pdf;base64,' . base64_encode($pdf->output())
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Erreur lors de la génération de la facture'], 500);
+        }
     }
 }
