@@ -1,24 +1,22 @@
 @component('mail::message')
-# Confirmation de votre réservation
+# Confirmation de commande
 
-Merci pour votre réservation pour l'événement "{{ $order->event->title }}"
+Merci pour votre commande !
 
 **Détails de la commande :**
-- Numéro de commande : {{ str_pad($order->id, 6, '0', STR_PAD_LEFT) }}
-- Date de l'événement : {{ $order->event->scheduled_date->format('d/m/Y H:i') }}
-- Montant : {{ number_format($order->total_price, 2) }}€
+- Numéro de commande : {{ $order->id }}
+- Événement : {{ $order->event->title }}
+- Prix : {{ number_format($order->total_price, 2) }} €
 
 **Votre QR Code d'accès :**
 
-<img src="{{ $message->embedData(file_get_contents($qrCodePath), 'qr-code.png') }}" alt="QR Code" style="width: 200px;"><br>
+<img src="{{ $order->qr_code_url }}" alt="QR Code" style="width: 200px; margin: 20px auto; display: block;">
 
-**Si vous ne parvenez pas à lire le QR Code, vous pouvez le télécharger ici :**
+Vous trouverez ci-joint votre QR code d'accès ainsi que votre facture.
 
-@component('mail::button', ['url' => $order->qr_code_url])
-Lien vers le QR Code
+@component('mail::button', ['url' => env('FRONTEND_URL')])
+Voir mes billets
 @endcomponent
-
-Veuillez présenter ce QR code à l'entrée de l'événement.
 
 Merci,<br>
 {{ config('app.name') }}
