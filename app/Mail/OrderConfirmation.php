@@ -62,6 +62,7 @@ class OrderConfirmation extends Mailable
             markdown: 'emails.orders.confirmation',
             with: [
                 'order' => $this->order,
+                'qrCodePath' => $this->qrCodePath,
             ],
         );
     }

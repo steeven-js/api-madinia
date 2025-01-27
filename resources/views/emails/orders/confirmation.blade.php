@@ -10,7 +10,7 @@ Merci pour votre commande !
 
 **Votre QR Code d'accès :**
 
-<img src="{{ $order->qr_code_url }}" alt="QR Code" style="width: 200px; margin: 20px auto; display: block;">
+<img src="{{ $message->embedData(file_get_contents($qrCodePath), 'qr-code.png') }}" alt="QR Code" style="width: 200px; margin: 20px auto; display: block;"><br>
 
 Vous trouverez ci-joint votre QR code d'accès ainsi que votre facture.
 
