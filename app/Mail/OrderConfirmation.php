@@ -59,7 +59,7 @@ class OrderConfirmation extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.order-confirmation',
+            markdown: 'emails.order.confirmation',
             with: [
                 'order' => $this->order,
             ],

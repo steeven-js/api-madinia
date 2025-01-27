@@ -7,6 +7,16 @@ use App\Models\BdRead;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Contrôleur pour gérer la communication avec le terminal de lecture de badges
+ *
+ * Pour exécuter :
+ * 1. Assurez-vous que le terminal est allumé et connecté au réseau
+ * 2. Vérifiez que l'adresse IP (192.168.0.193) et le port (2000) sont corrects
+ * 3. Lancez la commande : php artisan terminal:listen
+ * 4. Le terminal est prêt à lire les badges
+ * 5. Pour arrêter, utilisez Ctrl+C
+ */
 class TerminalController extends Controller
 {
     private $socket;
