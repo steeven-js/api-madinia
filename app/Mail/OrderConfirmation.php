@@ -59,7 +59,7 @@ class OrderConfirmation extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.order.confirmation',
+            markdown: 'emails.orders.confirmation',
             with: [
                 'order' => $this->order,
             ],
@@ -68,15 +68,14 @@ class OrderConfirmation extends Mailable
 
     public function build()
     {
-        return $this->view('emails.orders.confirmation')
-                    ->attach($this->qrCodePath, [
-                        'as' => 'qr-code.png',
-                        'mime' => 'image/png',
-                    ])
-                    ->attach($this->invoicePath, [
-                        'as' => 'facture-' . str_pad($this->order->id, 6, '0', STR_PAD_LEFT) . '.pdf',
-                        'mime' => 'application/pdf',
-                    ]);
+        return $this->attach($this->qrCodePath, [
+                    'as' => 'qr-code.png',
+                    'mime' => 'image/png',
+                ])
+                ->attach($this->invoicePath, [
+                    'as' => 'facture-' . str_pad($this->order->id, 6, '0', STR_PAD_LEFT) . '.pdf',
+                    'mime' => 'application/pdf',
+                ]);
     }
 
     public function __destruct()

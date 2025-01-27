@@ -182,12 +182,12 @@ class EventCheckOutController extends Controller
                         'status' => $order->status
                     ]);
 
-                    if ($order->status === 'unpaid') {
-                        $customerEmail = $session->customer_details->email ?? null;
-                        $customerName = $session->customer_details->name ?? null;
+                    $customerEmail = $session->customer_details->email ?? null;
+                    $customerName = $session->customer_details->name ?? null;
 
-                        DB::beginTransaction();
-                        try {
+                    DB::beginTransaction();
+                    try {
+                        if ($order->status === 'unpaid') {
                             // Mise à jour de la commande
                             $order->update([
                                 'status' => 'paid',
@@ -211,26 +211,31 @@ class EventCheckOutController extends Controller
 
                             // Génération du QR code
                             $order->generateQrCode();
-
-                            DB::commit();
-
-                            // Envoi de l'email de confirmation
-                            if ($customerEmail) {
-                                Mail::to($customerEmail)->send(new OrderConfirmation($order));
-                            }
-
-                            Log::info('Order updated successfully', [
-                                'order_id' => $order->id,
-                                'stripe_event_id' => $event->id
-                            ]);
-                        } catch (\Exception $e) {
-                            DB::rollBack();
-                            Log::error('Error updating order', [
-                                'order_id' => $order->id,
-                                'error' => $e->getMessage()
-                            ]);
-                            throw $e;
                         }
+
+                        DB::commit();
+
+                        // Envoi de l'email de confirmation (déplacé en dehors de la condition unpaid)
+                        if ($customerEmail) {
+                            Mail::to($customerEmail)->send(new OrderConfirmation($order));
+                            Log::info('Confirmation email sent', [
+                                'order_id' => $order->id,
+                                'email' => $customerEmail
+                            ]);
+                        }
+
+                        Log::info('Order processed successfully', [
+                            'order_id' => $order->id,
+                            'stripe_event_id' => $event->id
+                        ]);
+
+                    } catch (\Exception $e) {
+                        DB::rollBack();
+                        Log::error('Error processing order', [
+                            'order_id' => $order->id,
+                            'error' => $e->getMessage()
+                        ]);
+                        throw $e;
                     }
                 } catch (\Exception $e) {
                     Log::error('Error processing webhook', [
