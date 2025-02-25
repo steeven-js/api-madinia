@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Bd;
 use App\Models\BdRead;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Contrôleur pour gérer la communication avec le terminal de lecture de badges
